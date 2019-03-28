@@ -73,8 +73,12 @@ function login(res) {
       body: JSON.stringify(handle)
     }).then(res => res.json())
   }).then(res => {
+    if (res.code !== 0) {
+      alert(res.message)
+    }
     console.log('login info: ', res)
   }).catch(e => {
+    alert(e);
     console.error(e);
   })
 }
