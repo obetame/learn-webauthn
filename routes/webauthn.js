@@ -1,13 +1,20 @@
 const express = require('express');
 const router = express.Router();
 const cryptoRandomString = require('crypto-random-string');
-const verifyPackedAttestation = require('../utils/webauthn-packed.js');
-const verifyAndroidSafetyNet = require('../utils/webauthn-android-safetynet.js');
-const utils = require('../utils/utils.js');
-const { decode } = require('base64url');
+//const verifyPackedAttestation = require('../utils/webauthn-packed.js');
+//const verifyAndroidSafetyNet = require('../utils/webauthn-android-safetynet.js');
+//const utils = require('../utils/utils.js');
+const { encode, decode, toBuffer } = require('base64url');
+const base64url = require('../utils/array-buffer.js');
 const crypto = require('crypto');
+const AndroidSafetynet = require('../utils/android-safetynet.js');
 const { Fido2Lib } = require('fido2-lib');
 
+Fido2Lib.addAttestationFormat(
+  AndroidSafetynet.name,
+  AndroidSafetynet.parseFn,
+  AndroidSafetynet.validateFn
+)
 const f2l = new Fido2Lib({
   timeout: 60000,
   rpId: "web.quietboy.net",
@@ -36,13 +43,22 @@ function buildResData(name) {
   }
 	return res;
 }
-function registerUser(id) {
+function registerUser(id, obj) {
 	const key = Object.keys(users).find(key => users[key].id === id);
   users[key] = Object.assign({}, users[key], {
     registered: true,
+    ...obj
   });
 }
-
+function parseReqBodyWithArrayBuffer(body) {
+  Object.keys(body).forEach(key => {
+    if (typeof body[key] === 'object') {
+      parseReqBodyWithArrayBuffer(body[key]);
+    } else {
+      body[key] = base64url.decode(body[key]);
+    }
+  })
+}
 
 router.post('/register', (req, res, next) => {
   const name = req.body.name;
@@ -109,7 +125,8 @@ router.post('/login', (req, res, next) => {
   res.send(result);
 })
 
-router.post('/assertion', (req, res, next) => {
+// assertion
+router.post('/assertion', async (req, res, next) => {
   const body = req.body;
   const id = req.cookies.id;
   const name = Object.keys(users).find(key => users[key].id === id);
@@ -121,12 +138,35 @@ router.post('/assertion', (req, res, next) => {
     return;
   }
   console.log(name, users[name])
-  const result = utils.verifyAuthenticatorAssertionResponse(body, users[name]);
-
-  res.send(result);
+  let result = null;
+  try {
+    result = await f2l.attestationResult(req.body, Object.assign(
+      {}, users[name], {
+        challenge: req.cookies.challenge,
+        prevCounter: users[name].counter,
+        factor: 'either',
+        origin: 'https://web.quietboy.net'
+      }
+    ))
+  } catch(err) {
+    result = null;
+  }
+  console.log('username: ' + name + ' login status: ', result);
+  if (result) {
+    res.send({
+      message: 'login success',
+      code: 1
+    })
+  } else {
+    res.send({
+      message: 'login failed',
+      code: 0
+    })
+  }
 })
 
-router.post('/credential', (req, res, next) => {
+// attestation
+router.post('/credential', async (req, res, next) => {
   const body = req.body;
   if (!body) {
     res.send({
@@ -135,38 +175,34 @@ router.post('/credential', (req, res, next) => {
     })
     return;
   }
-  const clientData = JSON.parse(decode(body.response.clientDataJSON));
-  //console.log('clientData: ', clientData);
-  if (req.cookies.challenge !== clientData.challenge) {
-    res.send({
-      message: 'challenge vaild fail',
-      code: 0
-    });
-    return;
-  }
-  if (clientData.origin !== 'https://web.quietboy.net') {
-    res.send({
-      message: 'origin don\'t match',
-      code: 0
-    });
-    return;
+  const attestation = {
+    challenge: req.cookies.challenge,
+    origin: 'https://web.quietboy.net',
+    factor: 'either'
   }
 
-  let result = false;
   let message = 'register faile';
-  switch(body.fmt) {
-    case 'android-safetynet':
-      result = verifyAndroidSafetyNet(body);
-      break;
-    default:
-      message = `server don\'t support${body.fmt}`;
+  let result = null;
+  try {
+    const body = req.body;
+    parseReqBodyWithArrayBuffer(body);
+    console.log(body.credID);
+
+    result = await f2l.attestationResult(body, attestation);
+    message = 'register success';
+  } catch(err) {
+    result = false;
+    message = err;
   }
-  console.log('verify register status: ', result);
-  result && registerUser(req.cookies.id, body);
-  res.clearCookie('challenge');
+
+  console.log('verify register status: ', message);
+  if (result) {
+    registerUser(req.cookies.id, result);
+    res.clearCookie('challenge');
+  }
   res.send({
-    message: result ? 'register in success' : message,
-    code: 1
+    message: message.toString(),
+    code: result ? 1 : 0
   });
 })
 
