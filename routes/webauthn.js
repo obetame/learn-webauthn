@@ -6,16 +6,7 @@ const verifyAndroidSafetyNet = require('../utils/webauthn-android-safetynet.js')
 const utils = require('../utils/utils.js');
 const { decode } = require('base64url');
 const crypto = require('crypto');
-const { Fido2Lib } = require('fido2-lib');
 
-const f2l = new Fido2Lib({
-  timeout: 60000,
-  rpId: "web.quietboy.net",
-  rpName: 'web.quietboy.net',
-  challengeSize: 128,
-  attestation: 'direct',
-  cryptoParams: [-7 -257],
-})
 const users = {};
 // { name: {registered: boolean, id: string, counter: number }}
 
@@ -36,10 +27,13 @@ function buildResData(name) {
   }
 	return res;
 }
-function registerUser(id) {
+function registerUser(id, body) {
 	const key = Object.keys(users).find(key => users[key].id === id);
   users[key] = Object.assign({}, users[key], {
     registered: true,
+    credID: body.credID,
+    counter: body.counter,
+    publicKey: body.publicKey
   });
 }
 
@@ -120,7 +114,7 @@ router.post('/assertion', (req, res, next) => {
     });
     return;
   }
-  console.log(name, users[name])
+  // todo
   const result = utils.verifyAuthenticatorAssertionResponse(body, users[name]);
 
   res.send(result);
