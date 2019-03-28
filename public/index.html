@@ -1,13 +1,52 @@
+<!DOCTYPE html>
 <html>
 
 <head>
-  <title>Express</title>
-  <link rel="stylesheet" href="/stylesheets/style.css">
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>WebAuthn Demo</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link href="https://fonts.googleapis.com/css?family=Open+Sans:300,400,700" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/bulma@0.7.4/css/bulma.min.css" />
+    <link rel="stylesheet" type="text/css" href="/webauthn/css/index.css">
 </head>
 
 <body>
-  <h1>Express</h1>
-  <p>Welcome to Express</p>
+  <section id="app" class="hero is-success is-fullheight">
+    <div class="hero-body">
+      <div class="container has-text-centered">
+        <div class="column is-4 is-offset-4">
+          <h3 class="title has-text-grey">WebAuthn</h3>
+          <p class="subtitle has-text-grey">请输入用户名</p>
+          <div class="box">
+            <form>
+              <div id="register_field" class="field">
+                <div class="control">
+                  <input id="register_name" class="input is-large" type="text" placeholder="用户名">
+                </div>
+              </div>
+              <div id="login_field" style="display: none" class="field">
+                <div class="control">
+                  <input id="login_name" class="input is-large" type="text" placeholder="用户名">
+                </div>
+              </div>
+              <button id="action_btn" class="button is-block is-info is-large is-fullwidth">注册</button>
+          </form>
+          </div>
+          <p class="has-text-grey">
+            <a id="login_btn">登陆</a> &nbsp;·&nbsp;
+            <a id="register_btn">注册</a>
+          </p>
+        </div>
+      </div>
+    </div>
+    <a style="color: #000;text-align: center;" href="https://www.quietboy.net">Create by QuietBoy</a>
+  </section>
+  <script async type="text/javascript" src="/webauthn/js/base64url-arraybuffer.js"></script>
+  <script async type="text/javascript" src="/webauthn/js/webauthnhelper.js"></script>
+  <script async type="text/javascript" src="/webauthn/js/cbor.js"></script>
+  <script async type="text/javascript" src="/webauthn/js/index.js"></script>
 </body>
 
 </html>

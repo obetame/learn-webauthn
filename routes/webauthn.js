@@ -115,9 +115,18 @@ router.post('/assertion', (req, res, next) => {
     return;
   }
   // todo
-  const result = utils.verifyAuthenticatorAssertionResponse(body, users[name]);
-
-  res.send(result);
+  try {
+    const result = utils.verifyAuthenticatorAssertionResponse(body, users[name]);
+    res.send({
+      message: "login success",
+      code: 0
+    })
+  } catch(err) {
+    res.send({
+      message: err.toString(),
+      code: 1
+    });
+  }
 })
 
 router.post('/credential', (req, res, next) => {
